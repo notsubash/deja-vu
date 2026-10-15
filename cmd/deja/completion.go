@@ -123,6 +123,13 @@ _deja_completion() {
                 COMPREPLY=( $(compgen -W "--json --from --harness --project --since --role" -- "$cur") )
             fi
             ;;
+        recall)
+            if [[ "$prev" == "--harness" ]]; then
+                COMPREPLY=( $(compgen -W "$harnesses" -- "$cur") )
+            else
+                COMPREPLY=( $(compgen -W "--project --harness --limit" -- "$cur") )
+            fi
+            ;;
         remember)
             COMPREPLY=( $(compgen -W "--project --tag" -- "$cur") )
             ;;
@@ -137,6 +144,17 @@ _deja_completion() {
             ;;
         resume)
             COMPREPLY=( $(compgen -W "--exec --write-back --app" -- "$cur") )
+            ;;
+        restore)
+            if [[ "$prev" == "-o" || "$prev" == "--out" ]]; then
+                COMPREPLY=( $(compgen -f -- "$cur") )
+            elif [[ "$prev" == "--span" ]]; then
+                COMPREPLY=()
+            elif [[ "$cur" == -* ]]; then
+                COMPREPLY=( $(compgen -W "--span -o --out --force --all" -- "$cur") )
+            else
+                COMPREPLY=( $(compgen -f -- "$cur") )
+            fi
             ;;
         secrets)
             if [[ "$prev" == "--limit" ]]; then
@@ -208,6 +226,7 @@ _deja() {
     'secrets:credentials your agent transcripts are carrying'
     'tests:your build and test runs, week by week'
     'recap:what the last week settled, with receipts'
+    'recall:the page the MCP recall tool gives an agent'
     'how:commands this machine actually ran for a thing'
     'doctor:diagnose local stores and wiring'
     'promote:distill a session into a curated note'
@@ -285,6 +304,9 @@ _deja() {
     last)
       _arguments '--json[print JSON]' '--from=[which machine]:origin:(machine local)' '--harness=[filter by harness]:harness:($harnesses)' '--project=[filter by project]:project:' '--since=[filter by age]:duration:' '--role=[filter by role]:role:(%ROLES%)' '1:count:'
       ;;
+    recall)
+      _arguments '--project=[project name]:project:' '--harness=[filter by harness]:harness:($harnesses)' '--limit=[maximum sessions]:count:' '*:query:'
+      ;;
     remember)
       _arguments '--project=[note project]:project:' '*--tag=[tag the note, repeatable]:tag:' '1:text:'
       ;;
@@ -297,6 +319,9 @@ _deja() {
       ;;
     resume)
       _arguments '--exec[launch the native harness]' '--write-back[write a deleted transcript back from the index]' '--app[open a Codex session in the ChatGPT app]' '1:session ID prefix:'
+      ;;
+    restore)
+      _arguments '--span[which recorded span to restore]:number:' '(--out)-o[write the span to a file]:file:_files' '(-o)--out[write the span to a file]:file:_files' '--force[overwrite an existing -o file]' '--all[list every recorded span]' '1:path:_files'
       ;;
     secrets)
       _arguments '--limit=[maximum findings]:count:' '--json[print JSON]' '--scrub[rewrite files to remove secrets]' '--dry-run[show what --scrub would change]'
@@ -393,6 +418,9 @@ complete -c deja -n '__fish_seen_subcommand_from last' -l harness -r -a '%HARNES
 complete -c deja -n '__fish_seen_subcommand_from last' -l project -r
 complete -c deja -n '__fish_seen_subcommand_from last' -l since -r
 complete -c deja -n '__fish_seen_subcommand_from last' -l role -r -a '%ROLES%'
+complete -c deja -n '__fish_seen_subcommand_from recall; and not __fish_seen_subcommand_from bench' -l project -r
+complete -c deja -n '__fish_seen_subcommand_from recall; and not __fish_seen_subcommand_from bench' -l harness -r -a '%HARNESSES%'
+complete -c deja -n '__fish_seen_subcommand_from recall; and not __fish_seen_subcommand_from bench' -l limit -r
 complete -c deja -n '__fish_seen_subcommand_from remember' -l project -r
 complete -c deja -n '__fish_seen_subcommand_from remember' -l tag -r
 complete -c deja -n '__fish_seen_subcommand_from rules; and not __fish_seen_subcommand_from sync status candidates' -f -a 'sync status candidates'
@@ -402,6 +430,11 @@ complete -c deja -n '__fish_seen_subcommand_from rules; and __fish_seen_subcomma
 complete -c deja -n '__fish_seen_subcommand_from resume' -l exec
 complete -c deja -n '__fish_seen_subcommand_from resume' -l write-back -d 'Write a deleted transcript back from the index'
 complete -c deja -n '__fish_seen_subcommand_from resume' -l app -d 'Open a Codex session in the ChatGPT app'
+complete -c deja -n '__fish_seen_subcommand_from restore' -l span -x -d 'Which recorded span to restore'
+complete -c deja -n '__fish_seen_subcommand_from restore' -s o -l out -r -F -d 'Write the span to a file'
+complete -c deja -n '__fish_seen_subcommand_from restore' -l force -d 'Overwrite an existing -o file'
+complete -c deja -n '__fish_seen_subcommand_from restore' -l all -d 'List every recorded span'
+complete -c deja -n '__fish_seen_subcommand_from restore' -F
 complete -c deja -n '__fish_seen_subcommand_from secrets' -l limit -r
 complete -c deja -n '__fish_seen_subcommand_from secrets' -l json
 complete -c deja -n '__fish_seen_subcommand_from secrets' -l scrub -d 'Rewrite files to remove secrets'
@@ -484,6 +517,10 @@ Register-ArgumentCompleter -Native -CommandName deja -ScriptBlock {
                 elseif ($previous -eq '--role') { $roles }
                 else { @('--json', '--from', '--harness', '--project', '--since', '--role') }
             }
+            'recall' {
+                if ($previous -eq '--harness') { $harnesses }
+                else { @('--project', '--harness', '--limit') }
+            }
             'remember' { @('--project', '--tag') }
             'rules' {
                 if ($argumentPosition -eq 1) { @('sync', 'status', 'candidates') }
@@ -491,6 +528,10 @@ Register-ArgumentCompleter -Native -CommandName deja -ScriptBlock {
                 else { @() }
             }
             'resume' { @('--exec', '--write-back', '--app') }
+            'restore' {
+                if ($previous -in @('-o', '--out', '--span') -or -not $wordToComplete.StartsWith('-')) { @() }
+                else { @('--span', '-o', '--out', '--force', '--all') }
+            }
             'secrets' {
                 if ($previous -eq '--limit') { @() }
                 else { @('--limit', '--json', '--scrub', '--dry-run') }
