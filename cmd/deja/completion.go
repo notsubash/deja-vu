@@ -433,6 +433,7 @@ Register-ArgumentCompleter -Native -CommandName deja -ScriptBlock {
 
     $commands = @(%COMMANDS_QUOTED%)
     $harnesses = @('%HARNESSES%' -split ' ' | Where-Object { $_ })
+    $roles = @('%ROLES%' -split ' ' | Where-Object { $_ })
     $installTargets = @('%INSTALL_TARGETS%' -split ' ' | Where-Object { $_ }) + @('--all', '--auto')
     $handoffTargets = @('%HANDOFF_TARGETS%' -split ' ' | Where-Object { $_ })
     $defaultOptions = @(
@@ -480,7 +481,7 @@ Register-ArgumentCompleter -Native -CommandName deja -ScriptBlock {
             'uninstall' { $installTargets + @('--no-guidance') }
             'last' {
                 if ($previous -eq '--harness') { $harnesses }
-                elseif ($previous -eq '--role') { @('user', 'assistant', 'tool') }
+                elseif ($previous -eq '--role') { $roles }
                 else { @('--json', '--from', '--harness', '--project', '--since', '--role') }
             }
             'remember' { @('--project', '--tag') }
@@ -496,8 +497,8 @@ Register-ArgumentCompleter -Native -CommandName deja -ScriptBlock {
             }
             'stats' {
                 if ($previous -eq '--harness') { $harnesses }
-                elseif ($previous -eq '--role') { @('user', 'assistant', 'tool') }
-                else { @('--json', '--impact', '--html', '--redaction', '--card', '--harness', '--project', '--since', '--role') }
+                elseif ($previous -eq '--role') { $roles }
+                else { @('--json', '--impact', '--year', '--html', '--redaction', '--card', '--harness', '--project', '--since', '--role') }
             }
             'sync' {
                 if ($argumentPosition -eq 1) { @('export', 'import', 'ssh', 'forget') }
