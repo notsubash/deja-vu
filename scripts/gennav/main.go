@@ -74,6 +74,7 @@ var groups = []group{
 		{"delete-cursor-chat-history.html", "Cursor"},
 		{"cursor-state-vscdb-too-large.html", "Cursor state.vscdb too large"},
 		{"delete-copilot-chat-history.html", "Copilot Chat"},
+		{"delete-copilot-cli-session-history.html", "Copilot CLI"},
 		{"delete-gemini-cli-history.html", "Gemini CLI"},
 		{"delete-opencode-session-history.html", "opencode"},
 		{"delete-cline-task-history.html", "Cline"},
@@ -85,6 +86,7 @@ var groups = []group{
 		{"delete-kiro-session-history.html", "Kiro"},
 		{"delete-kimi-code-session-history.html", "Kimi Code"},
 		{"delete-windsurf-cascade-history.html", "Windsurf"},
+		{"delete-qwen-code-chat-history.html", "Qwen Code"},
 	}},
 	{title: "Per-agent guides", fold: true, links: []link{
 		{"memory-for-aider.html", "aider"},
