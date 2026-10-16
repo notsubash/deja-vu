@@ -74,6 +74,13 @@
     <summary>如何让 Cursor 查到这台机器上每个编程智能体的会话：它的 SQLite 聊天记录存在哪，以及 deja install cursor-auto 写入了什么。</summary>
   </entry>
   <entry>
+    <title>隐私：索引什么、脱敏什么、什么都不外传 — deja-vu</title>
+    <id>https://vshulcz.github.io/deja-vu/zh/guide/privacy.html</id>
+    <link rel="alternate" type="text/html" href="https://vshulcz.github.io/deja-vu/zh/guide/privacy.html"></link>
+    <updated>2026-10-16T00:00:00Z</updated>
+    <summary>deja 索引的是可能含有凭据的会话历史：索引和检索都在本地，凭据在写入前就被脱敏，排除、遗忘与信任范围决定留下什么。</summary>
+  </entry>
+  <entry>
     <title>deja-vu — the one memory your coding agents share</title>
     <id>https://vshulcz.github.io/deja-vu/</id>
     <link rel="alternate" type="text/html" href="https://vshulcz.github.io/deja-vu/"></link>
@@ -282,12 +289,5 @@
     <link rel="alternate" type="text/html" href="https://vshulcz.github.io/deja-vu/guide/memory-for-codex.html"></link>
     <updated>2026-10-14T00:00:00Z</updated>
     <summary>How to give Codex CLI recall over every coding agent&#39;s sessions on this machine — the MCP server, the hook it has to approve, and the plugin marketplace.</summary>
-  </entry>
-  <entry>
-    <title>Add memory to Command Code: past sessions — deja-vu</title>
-    <id>https://vshulcz.github.io/deja-vu/guide/memory-for-commandcode.html</id>
-    <link rel="alternate" type="text/html" href="https://vshulcz.github.io/deja-vu/guide/memory-for-commandcode.html"></link>
-    <updated>2026-10-14T00:00:00Z</updated>
-    <summary>Command Code logs a session per project and starts each one cold. deja wires its MCP server, hooks, skill and command, and indexes every agent here.</summary>
   </entry>
 </feed>
