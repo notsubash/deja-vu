@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Without `zstd`, compressed Codex rollouts and OpenClaw archives no longer make every `deja index`, search and `deja last` rewrite the index. A file left unread for want of `zstd` is held as waiting until it changes or `zstd` is installed, and a pass looks for `zstd` once instead of once per file. 1,500 such rollouts beside 4,000 plain ones made each pass take 0.40 s instead of 0.09 s. From @notsubash (#5105).
 - `deja last` and `deja show` answer from the index while another deja holds its lock instead of waiting it out. A session too new for that index, like the one a session-start refresh is still reading, still waits for it. From @Sora-bluesky (#5058).
 - `deja aider --help` and `deja goose --help` print the tool's own help, as deja's help always said they would, instead of deja's page; `deja help aider` still shows deja's (#5060).
 - The security model, architecture notes, JSON reference and guides say what the code does where they had drifted: the hook launcher's lookup order, every surface the `<deja-recall>` frame covers, the injection log among the files deja writes, redaction on sync import and `origin` on every sync record, the search fallback order and its six tiers, `--limit` defaults, and that no installer wires `hook-plan` (#5060).
