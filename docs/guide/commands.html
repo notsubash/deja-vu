@@ -32,7 +32,7 @@
 <link rel="apple-touch-icon" href="../assets/icon.svg">
 <link rel="sitemap" type="application/xml" href="https://vshulcz.github.io/deja-vu/sitemap.xml">
 <link rel="describedby" type="text/markdown" href="https://vshulcz.github.io/deja-vu/llms.txt">
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "TechArticle", "headline": "CLI reference", "description": "Every deja subcommand: search, ctx, blame, fix, how, secrets, remember, forget, stats, last, sources, install, embed, sync, doctor, bench and update.", "url": "https://vshulcz.github.io/deja-vu/guide/commands.html", "inLanguage": "en", "author": {"@type": "Person", "name": "vshulcz"}, "publisher": {"@type": "Person", "name": "vshulcz"}, "mainEntityOfPage": {"@type": "WebPage", "@id": "https://vshulcz.github.io/deja-vu/guide/commands.html"}, "isPartOf": {"@type": "WebSite", "name": "deja-vu", "url": "https://vshulcz.github.io/deja-vu/"}, "datePublished": "2026-07-19", "dateModified": "2026-10-16"}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "TechArticle", "headline": "CLI reference", "description": "Every deja subcommand: search, ctx, blame, fix, how, secrets, remember, forget, stats, last, sources, install, embed, sync, doctor, bench and update.", "url": "https://vshulcz.github.io/deja-vu/guide/commands.html", "inLanguage": "en", "author": {"@type": "Person", "name": "vshulcz"}, "publisher": {"@type": "Person", "name": "vshulcz"}, "mainEntityOfPage": {"@type": "WebPage", "@id": "https://vshulcz.github.io/deja-vu/guide/commands.html"}, "isPartOf": {"@type": "WebSite", "name": "deja-vu", "url": "https://vshulcz.github.io/deja-vu/"}, "datePublished": "2026-07-19", "dateModified": "2026-10-17"}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"deja-vu","item":"https://vshulcz.github.io/deja-vu/"},{"@type":"ListItem","position":2,"name":"CLI reference","item":"https://vshulcz.github.io/deja-vu/guide/commands.html"}]}</script>
 </head>
 <body>
@@ -73,7 +73,7 @@
 <a href="recover-a-deleted-session.html">Recover a deleted session</a>
 <a href="no-conversation-found-claude-code.html">No conversation found</a>
 </details>
-<details class="grpfold"><summary>Deleting sessions <span class="n">19</span></summary>
+<details class="grpfold"><summary>Deleting sessions <span class="n">20</span></summary>
 <a href="session-files-on-disk.html">Claude Code</a>
 <a href="delete-old-claude-sessions.html">Old sessions</a>
 <a href="delete-codex-sessions.html">Codex</a>
@@ -93,6 +93,7 @@
 <a href="delete-kimi-code-session-history.html">Kimi Code</a>
 <a href="delete-windsurf-cascade-history.html">Windsurf</a>
 <a href="delete-qwen-code-chat-history.html">Qwen Code</a>
+<a href="delete-trae-sessions.html">TRAE CLI</a>
 </details>
 <details class="grpfold"><summary>Per-agent guides <span class="n">36</span></summary>
 <a href="memory-for-aider.html">aider</a>
@@ -158,7 +159,7 @@
 <tr><td><code>ctrl-k</code></td><td>Every command by name, including copy the session id (<code>i</code>), copy the project path (<code>p</code>) and forget the session (<code>F</code>), which asks first.</td></tr>
 <tr><td><code>ctrl-u</code>, <code>ctrl-w</code></td><td>Clear the box, drop a word. <code>esc</code> clears or goes back; <code>q</code> quits from the list.</td></tr>
 </tbody></table>
-<p>The mouse works too: click a card, double-click to open, scroll. <code>DEJA_THEME=light</code> or <code>dark</code> picks the palette when the terminal does not say. <code>DEJA_TUI=0</code> or <code>TERM=dumb</code> prints the text brief instead.</p>
+<p>The mouse works too: click a card, double-click to open, scroll. <code>DEJA_THEME=light</code> or <code>dark</code> picks the palette when the terminal does not say; <code>DEJA_THEME=dracula</code> paints it in Dracula. <code>DEJA_TUI=0</code> or <code>TERM=dumb</code> prints the text brief instead.</p>
 <h2>Commands</h2>
 <table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>deja "query"</code></td><td>Search indexed history (<code>deja search "query"</code> is the same, for a query that starts with a dash). Filters: <code>--harness --project --since --role --session --limit --all --re --no-embed --json</code>. <code>--limit</code> takes 1–100; without it an exact match shows 15 hits (<code>--all</code> shows every one) and a ranked fallback shows its own window.</td></tr>

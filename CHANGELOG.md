@@ -9,17 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `DEJA_THEME=dracula` paints the interactive screen in the Dracula palette, for terminals themed that way. `light` and `dark` work as before, and a name deja does not know still falls back to the terminal background. From @demrom (#5106).
 - `deja delete <id>` and `D` in the TUI erase a session from its agent and from deja's index, after asking; there is no undo. `--dry-run` lists the files. Claude Code, Codex, Cursor CLI, Gemini CLI, Qwen Code, Copilot CLI, Cline CLI, Kimi Code, Grok, dsh, pi, Senpi, OpenClaw and Antigravity are removed as files, opencode through `opencode session delete`. Running sessions, shared stores and unchecked agents are refused.
 - A guide on deleting Copilot CLI session history: find the session by the id in `session.start`, not the directory name, and what `copilot --resume` loses. From @beiryu (#4965).
 - A guide on deleting Qwen Code chat history: the chat file, its sub-agent logs, and what `qwen -r` loses. From @beiryu (#4966).
 - Claude Code sessions whose transcript is gone come back as their prompts. `~/.claude/history.jsonl` keeps every typed prompt and paste with its session id after the cleanup deletes the transcript, so those sessions are searchable again, filed under the directory they ran in. Only the prompts: `deja show` says so, and `deja resume` refuses one. A session with its transcript on disk, or one deja kept after it was deleted, is left to the transcript. `DEJA_CLAUDE_HISTORY_FILE` moves the file (#5046).
 - The guide on deleting old Claude Code sessions in Chinese, with the same commands and numbers: 368 of 1,320 files are older than 30 days and hold 4% of the bytes, while the ten largest hold 86%. From @beiryu (#4970).
 - The Claude Code and Cursor memory guides in Chinese, with the same commands and numbers. From @Quartex246 (#5019, #5020).
+- The Codex CLI history guide in Chinese: where the rollouts live, why a plain `grep` stops seeing sessions older than a week, the `jq` and `sqlite3` recipes, and search and SSH sync. From @ursasi (#5085).
+- Five more guide pages in Chinese, with their commands and paths kept verbatim: deleting Codex sessions, deleting Cursor chats, Codex resume and its two errors, the Claude Code "No conversation found with session ID", and the full context window with its measured 77% / 0.2%. From @ursasi (#5080, #5081, #5082, #5083, #5084).
 - Shell completion for `deja recall`: `--project`, `--harness` with the harness names, and `--limit` in bash, zsh, fish and PowerShell, where it used to offer search flags recall refuses. zsh's command list now offers recall too. From @orshih6 (#5015).
 
 ### Fixed
 
 - Without `zstd`, compressed Codex rollouts and OpenClaw archives no longer make every `deja index`, search and `deja last` rewrite the index. A file left unread for want of `zstd` is held as waiting until it changes or `zstd` is installed, and a pass looks for `zstd` once instead of once per file. 1,500 such rollouts beside 4,000 plain ones made each pass take 0.40 s instead of 0.09 s. From @notsubash (#5105).
+- `deja promote` refuses a second id instead of promoting the last one named, so a mistyped first id no longer writes a note on another session. From @WynandVStaden (#5075).
 - `deja last` and `deja show` answer from the index while another deja holds its lock instead of waiting it out. A session too new for that index, like the one a session-start refresh is still reading, still waits for it. From @Sora-bluesky (#5058).
 - `deja aider --help` and `deja goose --help` print the tool's own help, as deja's help always said they would, instead of deja's page; `deja help aider` still shows deja's (#5060).
 - The security model, architecture notes, JSON reference and guides say what the code does where they had drifted: the hook launcher's lookup order, every surface the `<deja-recall>` frame covers, the injection log among the files deja writes, redaction on sync import and `origin` on every sync record, the search fallback order and its six tiers, `--limit` defaults, and that no installer wires `hook-plan` (#5060).
