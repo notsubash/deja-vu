@@ -58,7 +58,8 @@ func TestCompletionOffersEveryHandoffTarget(t *testing.T) {
 func TestCompletionSubstitutesEveryPlaceholder(t *testing.T) {
 	for _, shell := range completionTestShells {
 		if script := emittedCompletion(t, shell); strings.Contains(script, "%HARNESSES%") ||
-			strings.Contains(script, "%HANDOFF_TARGETS%") || strings.Contains(script, "%INSTALL_TARGETS%") {
+			strings.Contains(script, "%HANDOFF_TARGETS%") || strings.Contains(script, "%INSTALL_TARGETS%") ||
+			strings.Contains(script, "%NOTE_STATES%") {
 			t.Errorf("%s completion still carries a placeholder", shell)
 		}
 	}

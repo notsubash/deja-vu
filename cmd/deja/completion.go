@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/vshulcz/deja-vu/internal/sources"
@@ -28,6 +29,14 @@ func runCompletion(args []string) error {
 	// The last hand-written list: seven copies of "user assistant tool" while
 	// --role accepted four more (#1658).
 	script = strings.ReplaceAll(script, "%ROLES%", strings.Join(knownRoles, " "))
+	// The promote states come from the map promote checks against, sorted
+	// because a map has no order of its own (#5066).
+	states := make([]string, 0, len(sources.NoteStates))
+	for s := range sources.NoteStates {
+		states = append(states, s)
+	}
+	sort.Strings(states)
+	script = strings.ReplaceAll(script, "%NOTE_STATES%", strings.Join(states, " "))
 	// And the command list itself, which was the last copy left: `deja recap`
 	// and `deja tests` shipped in 0.21.0 and bash and fish had never heard of
 	// either, while the PowerShell array had grown three overlapping copies of
@@ -227,6 +236,17 @@ _deja_completion() {
                 COMPREPLY=( $(compgen -W "--project --all-projects --limit --json" -- "$cur") )
             fi
             ;;
+        promote)
+            if [[ "$prev" == "--state" ]]; then
+                COMPREPLY=( $(compgen -W "%NOTE_STATES%" -- "$cur") )
+            elif [[ "$prev" == "--to" ]]; then
+                COMPREPLY=( $(compgen -f -- "$cur") )
+            elif [[ "$prev" == "--note" || "$prev" == "--tag" ]]; then
+                COMPREPLY=()
+            else
+                COMPREPLY=( $(compgen -W "--state --note --tag --to" -- "$cur") )
+            fi
+            ;;
         brief|check|ctx|embed|hook-precompact|hook-prompt|mcp|share|sources|statusline|version|warmup)
             COMPREPLY=()
             ;;
@@ -400,6 +420,13 @@ _deja() {
     files|how)
       _arguments '--project[project name]:project:' '--all-projects[search every project, not just this one]' '--limit[maximum results]:count:' '--json[print JSON]' '*:topic:'
       ;;
+    promote)
+      if [[ "$words[CURRENT-1]" == "--state" ]]; then
+        _values 'state' %NOTE_STATES%
+      else
+        _arguments '--state[mark the note]:state:(%NOTE_STATES%)' '--note[the note text]:text:' '*--tag[tag the note, repeatable]:tag:' '--to[also append the note to a Markdown file]:file:_files' '1:session ID prefix:'
+      fi
+      ;;
     brief|check|ctx|embed|hook-precompact|hook-prompt|mcp|share|sources|statusline|version|warmup)
       ;;
     *)
@@ -519,6 +546,10 @@ complete -c deja -n '__fish_seen_subcommand_from files how' -l project -x
 complete -c deja -n '__fish_seen_subcommand_from files how' -l all-projects -d 'Search every project, not just this one'
 complete -c deja -n '__fish_seen_subcommand_from files how' -l limit -x
 complete -c deja -n '__fish_seen_subcommand_from files how' -l json
+complete -c deja -n '__fish_seen_subcommand_from promote' -l state -x -a '%NOTE_STATES%' -d 'Mark the note'
+complete -c deja -n '__fish_seen_subcommand_from promote' -l note -x -d 'The note text'
+complete -c deja -n '__fish_seen_subcommand_from promote' -l tag -x -d 'Tag the note, repeatable'
+complete -c deja -n '__fish_seen_subcommand_from promote' -l to -r -F -d 'Also append the note to a Markdown file'
 complete -c deja -n '__fish_seen_subcommand_from sync; and not __fish_seen_subcommand_from rules; and not __fish_seen_subcommand_from export import ssh forget' -a 'export import ssh forget'
 complete -c deja -n '__fish_seen_subcommand_from sync; and __fish_seen_subcommand_from export' -l include-imported
 complete -c deja -n '__fish_seen_subcommand_from sync; and __fish_seen_subcommand_from export' -l peer -r
@@ -537,6 +568,7 @@ Register-ArgumentCompleter -Native -CommandName deja -ScriptBlock {
     $commands = @(%COMMANDS_QUOTED%)
     $harnesses = @('%HARNESSES%' -split ' ' | Where-Object { $_ })
     $roles = @('%ROLES%' -split ' ' | Where-Object { $_ })
+    $noteStates = @('%NOTE_STATES%' -split ' ' | Where-Object { $_ })
     $installTargets = @('%INSTALL_TARGETS%' -split ' ' | Where-Object { $_ }) + @('--all', '--auto')
     $handoffTargets = @('%HANDOFF_TARGETS%' -split ' ' | Where-Object { $_ })
     $defaultOptions = @(
@@ -636,6 +668,11 @@ Register-ArgumentCompleter -Native -CommandName deja -ScriptBlock {
             { $_ -in @('files', 'how') } {
                 if ($previous -in @('--project', '--limit')) { @() }
                 else { @('--project', '--all-projects', '--limit', '--json') }
+            }
+            'promote' {
+                if ($previous -eq '--state') { $noteStates }
+                elseif ($previous -in @('--note', '--tag', '--to')) { @() }
+                else { @('--state', '--note', '--tag', '--to') }
             }
             { $_ -in @('brief', 'check', 'ctx', 'embed', 'hook-precompact', 'hook-prompt', 'mcp', 'share', 'sources', 'statusline', 'version', 'warmup') } { @() }
             default { $defaultOptions }
