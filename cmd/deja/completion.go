@@ -65,7 +65,7 @@ _deja_completion() {
     local install_targets="%INSTALL_TARGETS% --all --auto"
 
     if (( COMP_CWORD == 1 )); then
-        COMPREPLY=( $(compgen -W "$commands --version -version --json --re --all --no-embed --harness --project --since --role --session --rebuild --quiet --limit" -- "$cur") )
+        COMPREPLY=( $(compgen -W "$commands --version -version --json --re --all --no-embed --harness --project --since --role --session --rebuild --limit" -- "$cur") )
         return
     fi
 
@@ -204,7 +204,7 @@ _deja_completion() {
             if [[ "$prev" == "--harness" ]]; then
                 COMPREPLY=( $(compgen -W "$harnesses" -- "$cur") )
             else
-                COMPREPLY=( $(compgen -W "--json --re --all --no-embed --harness --project --since --role --session --rebuild --quiet --limit" -- "$cur") )
+                COMPREPLY=( $(compgen -W "--json --re --all --no-embed --harness --project --since --role --session --rebuild --limit" -- "$cur") )
             fi
             ;;
     esac
@@ -355,7 +355,7 @@ _deja() {
     check|ctx|embed|hook-precompact|hook-prompt|mcp|share|sources|statusline|update|version|warmup)
       ;;
     *)
-      _arguments '--json[print JSON]' '--re[interpret query as a regular expression]' '--all[include all results]' '--no-embed[skip semantic reranking]' '--harness=[filter by harness]:harness:($harnesses)' '--project=[filter by project]:project:' '--since=[filter by age]:duration:' '--role=[filter by role]:role:(%ROLES%)' '--session=[only one session]:id:' '--rebuild[force a full rebuild]' '--quiet[say nothing when it worked]' '--limit=[max sessions to return (1-100)]:count:'
+      _arguments '--json[print JSON]' '--re[interpret query as a regular expression]' '--all[include all results]' '--no-embed[skip semantic reranking]' '--harness=[filter by harness]:harness:($harnesses)' '--project=[filter by project]:project:' '--since=[filter by age]:duration:' '--role=[filter by role]:role:(%ROLES%)' '--session=[only one session]:id:' '--rebuild[force a full rebuild]' '--limit=[max sessions to return (1-100)]:count:'
       ;;
   esac
 }
@@ -413,6 +413,7 @@ complete -c deja -n '__fish_seen_subcommand_from hook-context' -l plain
 complete -c deja -n '__fish_seen_subcommand_from hook-context' -l once
 complete -c deja -n '__fish_seen_subcommand_from hook-context' -l notes
 complete -c deja -n '__fish_seen_subcommand_from index' -l rebuild
+complete -c deja -n '__fish_seen_subcommand_from index' -l quiet -d 'Say nothing when it worked'
 complete -c deja -n '__fish_seen_subcommand_from install uninstall' -a '%INSTALL_TARGETS% --all --auto'
 complete -c deja -n '__fish_seen_subcommand_from install uninstall' -l no-guidance
 complete -c deja -n '__fish_seen_subcommand_from install' -l no-index -d 'Skip indexing'
@@ -519,7 +520,7 @@ Register-ArgumentCompleter -Native -CommandName deja -ScriptBlock {
                 else { @('--to', '--exec') }
             }
             'hook-context' { @('--plain', '--once', '--copilot', '--notes') }
-            'index' { @('--rebuild', '-rebuild') }
+            'index' { @('--rebuild', '-rebuild', '--quiet', '-quiet') }
             'install' { $installTargets + @('--no-guidance', '--no-index', '--force') }
             'uninstall' { $installTargets + @('--no-guidance') }
             'last' {
