@@ -197,7 +197,10 @@ _deja_completion() {
                 COMPREPLY=( $(compgen -W "--json --harness --offset --limit" -- "$cur") )
             fi
             ;;
-        check|ctx|embed|hook-precompact|hook-prompt|mcp|share|sources|statusline|update|version|warmup)
+        update)
+            COMPREPLY=( $(compgen -W "--force" -- "$cur") )
+            ;;
+        check|ctx|embed|hook-precompact|hook-prompt|mcp|share|sources|statusline|version|warmup)
             COMPREPLY=()
             ;;
         *)
@@ -352,7 +355,10 @@ _deja() {
     show)
       _arguments '--json[print JSON]' '--harness=[filter by harness]:harness:($harnesses)' '--offset=[skip leading messages]:count:' '--limit=[cap messages printed]:count:' '1:session ID prefix:'
       ;;
-    check|ctx|embed|hook-precompact|hook-prompt|mcp|share|sources|statusline|update|version|warmup)
+    update)
+      _arguments '--force[write over a binary a package manager owns]'
+      ;;
+    check|ctx|embed|hook-precompact|hook-prompt|mcp|share|sources|statusline|version|warmup)
       ;;
     *)
       _arguments '--json[print JSON]' '--re[interpret query as a regular expression]' '--all[include all results]' '--no-embed[skip semantic reranking]' '--harness=[filter by harness]:harness:($harnesses)' '--project=[filter by project]:project:' '--since=[filter by age]:duration:' '--role=[filter by role]:role:(%ROLES%)' '--session=[only one session]:id:' '--rebuild[force a full rebuild]' '--quiet[say nothing when it worked]' '--limit=[max sessions to return (1-100)]:count:'
@@ -458,6 +464,7 @@ complete -c deja -n '__fish_seen_subcommand_from stats' -l harness -r -a '%HARNE
 complete -c deja -n '__fish_seen_subcommand_from stats' -l project -r
 complete -c deja -n '__fish_seen_subcommand_from stats' -l since -r
 complete -c deja -n '__fish_seen_subcommand_from stats' -l role -r -a '%ROLES%'
+complete -c deja -n '__fish_seen_subcommand_from update' -l force -d 'Write over a binary a package manager owns'
 complete -c deja -n '__fish_seen_subcommand_from sync; and not __fish_seen_subcommand_from rules; and not __fish_seen_subcommand_from export import ssh forget' -a 'export import ssh forget'
 complete -c deja -n '__fish_seen_subcommand_from sync; and __fish_seen_subcommand_from export' -l include-imported
 complete -c deja -n '__fish_seen_subcommand_from sync; and __fish_seen_subcommand_from export' -l peer -r
@@ -561,7 +568,8 @@ Register-ArgumentCompleter -Native -CommandName deja -ScriptBlock {
                 if ($previous -eq '--harness') { $harnesses }
                 else { @('--json', '--harness', '--offset', '--limit') }
             }
-            { $_ -in @('check', 'ctx', 'embed', 'hook-precompact', 'hook-prompt', 'mcp', 'share', 'sources', 'statusline', 'update', 'version', 'warmup') } { @() }
+            'update' { @('--force') }
+            { $_ -in @('check', 'ctx', 'embed', 'hook-precompact', 'hook-prompt', 'mcp', 'share', 'sources', 'statusline', 'version', 'warmup') } { @() }
             default { $defaultOptions }
         }
     }
