@@ -203,6 +203,16 @@ _deja_completion() {
         wip)
             COMPREPLY=( $(compgen -W "--json" -- "$cur") )
             ;;
+        log)
+            COMPREPLY=( $(compgen -W "--last --json" -- "$cur") )
+            ;;
+        view)
+            if [[ "$prev" == "--out" ]]; then
+                COMPREPLY=( $(compgen -f -- "$cur") )
+            else
+                COMPREPLY=( $(compgen -W "--out --no-open" -- "$cur") )
+            fi
+            ;;
         brief|check|ctx|embed|hook-precompact|hook-prompt|mcp|share|sources|statusline|version|warmup)
             COMPREPLY=()
             ;;
@@ -364,6 +374,12 @@ _deja() {
     wip)
       _arguments '--json[print JSON]'
       ;;
+    log)
+      _arguments '--last[print the most recent injected digest]' '--json[print JSON]' '1:count:'
+      ;;
+    view)
+      _arguments '--out[write the page to a file]:file:_files' '--no-open[do not open the browser]'
+      ;;
     brief|check|ctx|embed|hook-precompact|hook-prompt|mcp|share|sources|statusline|version|warmup)
       ;;
     *)
@@ -472,6 +488,10 @@ complete -c deja -n '__fish_seen_subcommand_from stats' -l since -r
 complete -c deja -n '__fish_seen_subcommand_from stats' -l role -r -a '%ROLES%'
 complete -c deja -n '__fish_seen_subcommand_from update' -l force -d 'Write over a binary a package manager owns'
 complete -c deja -n '__fish_seen_subcommand_from wip' -l json
+complete -c deja -n '__fish_seen_subcommand_from log' -l last -d 'Print the most recent injected digest'
+complete -c deja -n '__fish_seen_subcommand_from log' -l json
+complete -c deja -n '__fish_seen_subcommand_from view' -l out -r -F -d 'Write the page to a file'
+complete -c deja -n '__fish_seen_subcommand_from view' -l no-open -d 'Do not open the browser'
 complete -c deja -n '__fish_seen_subcommand_from sync; and not __fish_seen_subcommand_from rules; and not __fish_seen_subcommand_from export import ssh forget' -a 'export import ssh forget'
 complete -c deja -n '__fish_seen_subcommand_from sync; and __fish_seen_subcommand_from export' -l include-imported
 complete -c deja -n '__fish_seen_subcommand_from sync; and __fish_seen_subcommand_from export' -l peer -r
@@ -577,6 +597,11 @@ Register-ArgumentCompleter -Native -CommandName deja -ScriptBlock {
             }
             'update' { @('--force') }
             'wip' { @('--json') }
+            'log' { @('--last', '--json') }
+            'view' {
+                if ($previous -eq '--out') { @() }
+                else { @('--out', '--no-open') }
+            }
             { $_ -in @('brief', 'check', 'ctx', 'embed', 'hook-precompact', 'hook-prompt', 'mcp', 'share', 'sources', 'statusline', 'version', 'warmup') } { @() }
             default { $defaultOptions }
         }
