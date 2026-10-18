@@ -139,8 +139,12 @@ func TestNoShellCarriesTheCommandListTwice(t *testing.T) {
 	if n := strings.Count(ps, "$commands = @("); n != 1 {
 		t.Errorf("the powershell script declares $commands %d times", n)
 	}
-	if n := strings.Count(ps, "'recap'"); n != 1 {
-		t.Errorf("'recap' appears %d times in the powershell script", n)
+	// Counted in the array alone: recap has a case of its own now, which names
+	// it once more further down (#5069).
+	_, decl, _ := strings.Cut(ps, "$commands = @(")
+	decl, _, _ = strings.Cut(decl, "\n")
+	if n := strings.Count(decl, "'recap'"); n != 1 {
+		t.Errorf("'recap' appears %d times in the powershell command list", n)
 	}
 }
 

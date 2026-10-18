@@ -213,6 +213,13 @@ _deja_completion() {
                 COMPREPLY=( $(compgen -W "--out --no-open" -- "$cur") )
             fi
             ;;
+        recap)
+            if [[ "$prev" == "--since" || "$prev" == "--limit" ]]; then
+                COMPREPLY=()
+            else
+                COMPREPLY=( $(compgen -W "--since --limit --json" -- "$cur") )
+            fi
+            ;;
         brief|check|ctx|embed|hook-precompact|hook-prompt|mcp|share|sources|statusline|version|warmup)
             COMPREPLY=()
             ;;
@@ -380,6 +387,9 @@ _deja() {
     view)
       _arguments '--out[write the page to a file]:file:_files' '--no-open[do not open the browser]'
       ;;
+    recap)
+      _arguments '--since[how far back, a duration like 30d (default 7d)]:duration:' '--limit[maximum sessions]:count:' '--json[print JSON]'
+      ;;
     brief|check|ctx|embed|hook-precompact|hook-prompt|mcp|share|sources|statusline|version|warmup)
       ;;
     *)
@@ -492,6 +502,9 @@ complete -c deja -n '__fish_seen_subcommand_from log' -l last -d 'Print the most
 complete -c deja -n '__fish_seen_subcommand_from log' -l json
 complete -c deja -n '__fish_seen_subcommand_from view' -l out -r -F -d 'Write the page to a file'
 complete -c deja -n '__fish_seen_subcommand_from view' -l no-open -d 'Do not open the browser'
+complete -c deja -n '__fish_seen_subcommand_from recap' -l since -x -d 'How far back, a duration like 30d (default 7d)'
+complete -c deja -n '__fish_seen_subcommand_from recap' -l limit -x -d 'Maximum sessions'
+complete -c deja -n '__fish_seen_subcommand_from recap' -l json
 complete -c deja -n '__fish_seen_subcommand_from sync; and not __fish_seen_subcommand_from rules; and not __fish_seen_subcommand_from export import ssh forget' -a 'export import ssh forget'
 complete -c deja -n '__fish_seen_subcommand_from sync; and __fish_seen_subcommand_from export' -l include-imported
 complete -c deja -n '__fish_seen_subcommand_from sync; and __fish_seen_subcommand_from export' -l peer -r
@@ -601,6 +614,10 @@ Register-ArgumentCompleter -Native -CommandName deja -ScriptBlock {
             'view' {
                 if ($previous -eq '--out') { @() }
                 else { @('--out', '--no-open') }
+            }
+            'recap' {
+                if ($previous -in @('--since', '--limit')) { @() }
+                else { @('--since', '--limit', '--json') }
             }
             { $_ -in @('brief', 'check', 'ctx', 'embed', 'hook-precompact', 'hook-prompt', 'mcp', 'share', 'sources', 'statusline', 'version', 'warmup') } { @() }
             default { $defaultOptions }
