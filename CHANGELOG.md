@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   from 9.3 s to 4.2 s and the whole build from 273 to 215 CPU-seconds (#5567).
 ### Added
 
+- MiniMax Code: sessions under `~/.minimax/v2/sessions` are indexed with the
+  person's own words rather than the runtime's reminders, `deja resume` prints
+  `mcode --session <id>`, and `deja install mcode` / `mcode-auto` write the MCP
+  entry and a hook plugin. From @yangala (#5593).
 - `~/.config/deja/projects` names a directory tree as one project, one `<path> = <name>` per line. Every checkout and worktree under a listed path is indexed under that name, and the hooks and recall standing anywhere in it scope to all of them. Editing the file renames nothing already indexed: `deja index` and `deja doctor` say a rebuild is due, `deja index --rebuild` renames the sessions whose transcripts are still on disk, and sessions indexed before the file existed still match from their own checkout until then. The exclude file wins over an alias, so a repository excluded by its own name stays out. From @Maweill (#5097, #5373).
 - `deja search --sort date` lists the newest match first, in the text and in
   `--json`, and `^s` in the search screen turns the list newest first under
@@ -26,6 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `deja install codex` no longer writes `type = "stdio"` into
+  `[mcp_servers.deja]`. Codex 0.163 warned the key is not a setting it knows,
+  and picks stdio from `command` anyway. A reinstall drops the line from an
+  older block. Reported by @j2h4u (#5590).
 - `deja fix`, `deja friction` and the hook at a failed command now know the
   errors a package install hits behind a mirror or a proxy: pip's "No matching
   distribution found", an HTTP 403 or 401 from an index, an unresolvable host,

@@ -556,8 +556,12 @@ func installGooseAuto(exe string, uninstall bool) (installResult, error) {
 	// -auto adds, so `deja install goose` followed by `goose-auto` said
 	// "unchanged" three times while switching session-start recall on.
 	if action != "unchanged" {
-		return wroteAll(installResult{Path: gooseHookPath(), Action: action}, hints(),
-			installResult{Path: gooseRecipePath(), Action: action}), nil
+		wrote := []installResult{{Path: gooseHookPath(), Action: action}, hints()}
+		// --no-guidance writes no recipe, so there is none to name (#5589).
+		if !skippingGuidance {
+			wrote = append(wrote, installResult{Path: gooseRecipePath(), Action: action})
+		}
+		return wroteAll(wrote...), nil
 	}
 	return res, nil
 }

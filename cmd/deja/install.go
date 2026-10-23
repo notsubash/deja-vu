@@ -79,6 +79,8 @@ func runInstall(dir string, args []string, uninstall bool) error {
 	removingWiring = uninstall
 	defer func() { removingWiring = false }()
 	guidance, noIndex, targetArgs := parseInstallArgs(args)
+	skippingGuidance = !guidance
+	defer func() { skippingGuidance = false }()
 	verb := "install"
 	if uninstall {
 		verb = "uninstall"
@@ -1001,6 +1003,11 @@ var removingTargets map[string]bool
 // has been edited since it wrote it.
 var forceGuidance bool
 
+// skippingGuidance is set by `deja install --no-guidance` for the length of the
+// run. The /deja command file is written after the target, so a target that
+// names it in its own report has to know it will not be written (#5589).
+var skippingGuidance bool
+
 // configParseError names the file a parse refusal is about. The refusal is what
 // a reader is sent to act on — doctor points at `deja install <targets>` when a
 // rewire failed, and the parser's own words alone left them guessing which of
@@ -1124,12 +1131,22 @@ func snapshotHoldsDejaWiring(b []byte) bool {
 	return mentionsDeja(out)
 }
 
-// withoutDejaListNames is v without the list items that are the bare name.
+// dejaEntryKeys are the keys deja puts its own name under to identify an entry.
+var dejaEntryKeys = map[string]bool{"name": true, "id": true, "label": true}
+
+// withoutDejaListNames is v without the list items and map values that are the
+// bare name. A key named deja stays: that is deja's entry. So does a value under
+// the keys deja names its own entries by (`"name": "deja"` in its plugin package,
+// `"id"` and `"label"` in grok's server list). Any other value is the reader's own
+// choice, as in OpenClaw's `plugins.slots.memory` (#5308).
 func withoutDejaListNames(v any) any {
 	switch t := v.(type) {
 	case map[string]any:
 		m := make(map[string]any, len(t))
 		for k, c := range t {
+			if s, ok := c.(string); ok && !dejaEntryKeys[k] && strings.TrimSpace(s) == "deja" {
+				continue
+			}
 			m[k] = withoutDejaListNames(c)
 		}
 		return m
@@ -2440,7 +2457,9 @@ func installStatusline(exe string, uninstall bool) (installResult, error) {
 func installCodex(exe string, uninstall bool) (installResult, error) {
 	path := filepath.Join(sources.CodexHome(), "config.toml")
 	cmd, args := mcpLaunchCommandArgs(exe, uninstall)
-	block := fmt.Sprintf("[mcp_servers.deja]\ntype = \"stdio\"\ncommand = %q\nargs = %s\n", cmd, tomlStringArray(args))
+	// No `type` key: codex picks stdio from `command`, and 0.163 warns that
+	// `mcp_servers.deja.type` is a setting it does not know (#5590).
+	block := fmt.Sprintf("[mcp_servers.deja]\ncommand = %q\nargs = %s\n", cmd, tomlStringArray(args))
 	return installTOML(path, block, uninstall)
 }
 
@@ -3043,6 +3062,10 @@ func tomlRecordedNames(key string) []string {
 	return names
 }
 
+// tomlOwnedMCPKey names the keys an install rewrites. `type` stays on the list
+// though deja no longer writes it: an older codex block put `type = "stdio"`
+// there, and a reinstall drops it rather than keeping it as one of the reader's
+// own lines (#5590).
 func tomlOwnedMCPKey(key string) bool {
 	switch key {
 	case "type", "command", "args":
@@ -5052,6 +5075,9 @@ func installTargetNames() []string {
 		"trae", "trae-auto",
 		"trae-ide", "trae-ide-auto",
 		"muse", "muse-auto",
+		// MiniMax Code: the MCP entry alone, and the package that adds the
+		// hooks beside it.
+		"mcode", "mcode-auto",
 		"kimi", "kimi-auto",
 		"hermes", "hermes-auto",
 		"pi", "pi-auto",
@@ -5231,6 +5257,10 @@ func existingTargetChecks() map[string]string {
 		"workbuddy":    filepath.Join(sources.WorkBuddyConfigDir(), "projects"),
 		"trae":         filepath.Join(sources.TraeRoot(), "sessions"), // the same: deja creates traecli.toml
 		"muse":         sources.MuseRoot(),                            // the same: deja creates ~/.config/muse
+		// The session store, not the config: deja creates mcp.json and the
+		// plugin package itself, so keying on the config would make every
+		// machine a MiniMax Code machine after one install.
+		"mcode": sources.McodeRoot(),
 		// The IDE's own globalStorage, not User/: deja writes User/mcp.json.
 		"trae-ide": filepath.Join(traeIDEUserDir(), "globalStorage"),
 		// Reasonix's own config.toml, which it writes on first run. deja

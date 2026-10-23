@@ -154,6 +154,11 @@ func TestAJSONCStatusLineRoundTripsEveryShape(t *testing.T) {
 		{"nested, ui the last key", []string{"ui", "statusLine"}, "{ // c\n  \"model\": \"x\",\n  \"ui\": {}\n}\n", "{ // c\n  \"model\": \"x\"\n}\n"},
 		{"comment between the last two keys", []string{"statusLine"}, "{\n  \"model\": \"x\",\n  // note\n  \"theme\": \"dark\"\n}\n", ""},
 		{"block comment before the null", []string{"statusLine"}, "{\n  \"statusLine\": /* x */ null,\n  \"a\": 1\n}\n", "{\n  \"a\": 1\n}\n"},
+		// A comment after the key's comma stays on the line it was on,
+		// rather than joining the object's opening brace (#5310).
+		{"line comment after the null", []string{"statusLine"}, "{\n  \"statusLine\": null, // off until I pick one\n  \"theme\": \"dark\"\n}\n", "{\n  // off until I pick one\n  \"theme\": \"dark\"\n}\n"},
+		// And a one-line block holding only a comment comes back on one line.
+		{"one-line ui holding a comment", []string{"ui", "statusLine"}, "{\n  \"ui\": { /* later */ }\n}\n", ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "settings.json")

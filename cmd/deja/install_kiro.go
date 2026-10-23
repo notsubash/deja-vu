@@ -104,7 +104,7 @@ func installKiro(exe string, uninstall bool) (installResult, error) {
 	if err != nil {
 		return res, err
 	}
-	steering, err := installTextFile(kiroSteeringPath(), kiroSteering(exe), uninstall)
+	steering, err := installTextFile(kiroSteeringPath(), kiroSteering(exe), exe, uninstall)
 	if err != nil {
 		return installResult{}, err
 	}
@@ -115,6 +115,7 @@ func installKiro(exe string, uninstall bool) (installResult, error) {
 		return installResult{}, err
 	}
 	if uninstall {
+		pruneCreatedDir(filepath.Dir(kiroMCPSettingsPath()))
 		return wroteAll(res, steering, skill), nil
 	}
 	out := wroteAll(res, steering, skill)
@@ -201,7 +202,7 @@ func installKiroAuto(exe string, uninstall bool) (installResult, error) {
 	if err != nil {
 		return installResult{}, err
 	}
-	agent, err := installKiroAgent(path, body, uninstall)
+	agent, err := installKiroAgent(path, body, hookExeFor(exe, uninstall), uninstall)
 	if err != nil {
 		return installResult{}, err
 	}
@@ -209,6 +210,9 @@ func installKiroAuto(exe string, uninstall bool) (installResult, error) {
 		if err := kiroForgetDefaultAgent(); err != nil {
 			return installResult{}, err
 		}
+	}
+	if uninstall {
+		pruneCreatedDir(filepath.Dir(kiroSettingsPath()))
 	}
 	out := wroteAll(base, agent)
 	if !uninstall {
@@ -223,14 +227,14 @@ func installKiroAuto(exe string, uninstall bool) (installResult, error) {
 // its hooks into a {name, trigger, action} list. Only deja's own keys and
 // hook entries are deja's; written whole, a re-install dropped the reader's
 // server and an uninstall deleted it with the file.
-func installKiroAgent(path, body string, uninstall bool) (installResult, error) {
+func installKiroAgent(path, body, exe string, uninstall bool) (installResult, error) {
 	old, err := readConfig(path)
 	if err != nil || len(old) == 0 {
-		return installTextFile(path, body, uninstall)
+		return installTextFile(path, body, exe, uninstall)
 	}
 	root, ok := parseJSONValue(old).(map[string]any)
 	if !ok {
-		return installTextFile(path, body, uninstall)
+		return installTextFile(path, body, exe, uninstall)
 	}
 	var fresh map[string]any
 	if uerr := json.Unmarshal([]byte(body), &fresh); uerr != nil {
@@ -239,7 +243,7 @@ func installKiroAgent(path, body string, uninstall bool) (installResult, error) 
 	hooks := kiroAgentHooksWithout(root["hooks"])
 	if uninstall {
 		if !kiroAgentHoldsTheirs(root, hooks) {
-			return installTextFile(path, body, true)
+			return installTextFile(path, body, exe, true)
 		}
 		if hooks != nil {
 			root["hooks"] = hooks
@@ -405,11 +409,12 @@ func installKiroGlobalHooks(exe string, uninstall bool) (installResult, error) {
 		}
 		return r, nil
 	}
-	body, err := kiroGlobalHooksJSON(hookExeFor(exe, uninstall))
+	hookExe := hookExeFor(exe, uninstall)
+	body, err := kiroGlobalHooksJSON(hookExe)
 	if err != nil {
 		return installResult{}, err
 	}
-	return installTextFile(path, body, uninstall)
+	return installTextFile(path, body, hookExe, uninstall)
 }
 
 // kiroSettingsPath is kiro-cli's own settings file, where
