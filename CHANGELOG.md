@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   against the profile's published schemas and test vectors. `deja mcp` itself
   is unchanged. Register it with `qwen mcp add deja-context deja mcp
   --context-search --timeout 8000 --include-tools context_search` (#5662).
+- `DEJA_RECALL_GLOBAL=1` makes MCP recall, `deja recall` and `deja mcp
+  --context-search` rank every project the same instead of putting the current
+  one first. Unset, nothing changes, and the hooks and the TUI keep their
+  scope. From @Terminator637 (#5674).
+
 ### Changed
 
 - The instructions, skills and extensions no longer tell the agent that a
@@ -40,6 +45,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the value, as `deja recall` does. It shared one message with `--limit`,
   "needs a positive integer", which is wrong for `--offset`: 0 is the first
   message (#5650).
+- `deja stats --year` says "1 session", "1 turn" and "1 record" on every
+  line, not only the first, and the verbs agree. From @dannyward630 (#5655,
+  #5658).
 - Amp threads the plugin writes are filed under the workspace Amp has open,
   not `amp/plugins`. The plugin took `process.cwd()` for the thread's
   directory, and Amp runs a plugin from `~/.config/amp/plugins`, so every
@@ -61,6 +69,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reasoning off replied with only that line in 10 of 10 runs. It now asks for
   the answer first and the line last: 10 of 10 answered, 10 still credited
   the recall (#5664).
+- On Windows, plugins no longer flash a console window each time they run
+  deja from a GUI host such as the DSH desktop app. Every spawn in the shipped
+  and generated JavaScript plugins and the npm launcher now passes
+  `windowsHide`, and the Hermes plugins pass `CREATE_NO_WINDOW`. Reported by @Deadsoul-114514 (#5635).
 
 ## [0.23.1] - 2026-10-25
 
