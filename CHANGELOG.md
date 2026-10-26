@@ -41,6 +41,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `deja how` and `deja restore` run without an argument print the usage line
+  `deja help` prints. Each kept its own copy, and both had drifted: `how`
+  left out `--all-projects` and `restore` spelled `-o file` for
+  `-o|--out file`. `deja files`, a third copy, now reads the same entry
+  (#5641).
 - `deja stats --year` says "1 session", "1 turn" and "1 record" on every
   line, not only the first, and the verbs agree. From @dannyward630 (#5655,
   #5658).

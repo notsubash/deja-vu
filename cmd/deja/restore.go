@@ -89,7 +89,7 @@ func runRestore(dir string, args []string, stdout io.Writer) error {
 		}
 	}
 	if path == "" {
-		return errors.New("usage: deja restore <path> [--span n] [-o file] [--force] [--all]")
+		return usageError("restore")
 	}
 
 	spans, err := findRestoreSpans(dir, path)
