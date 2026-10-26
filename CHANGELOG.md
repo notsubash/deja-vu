@@ -46,6 +46,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   left out `--all-projects` and `restore` spelled `-o file` for
   `-o|--out file`. `deja files`, a third copy, now reads the same entry
   (#5641).
+- opencode and Kilo keep one per-prompt recall block on a user message. The
+  plugins appended on every model call and only checked for their own block at
+  the end, so two copies of the plugin, or a host that keeps the message
+  between calls, stacked a block per call, alternating between two pointers.
+  The block is now put in place of any already there, and a block already on
+  the message is reused rather than asked for again. Run
+  `deja install opencode-auto` again to rewrite the plugin (#5682).
 - `deja show --offset -1` says `--offset` wants a number from 0 up and quotes
   the value, as `deja recall` does. It shared one message with `--limit`,
   "needs a positive integer", which is wrong for `--offset`: 0 is the first
