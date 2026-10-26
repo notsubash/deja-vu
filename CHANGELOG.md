@@ -45,6 +45,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the value, as `deja recall` does. It shared one message with `--limit`,
   "needs a positive integer", which is wrong for `--offset`: 0 is the first
   message (#5650).
+- `deja help delete` names the agents it takes instead of describing them: the
+  page closes with the list built from the two maps the command reads, so an
+  agent added to either is named there without a second edit. The refusal for an
+  agent whose sessions deja cannot check yet opens with the agent —
+  `Continue sessions can't be deleted yet: deja has not checked how Continue
+  lists them` — where the CLI's own prefix made it read `deja: deja can't delete
+  Continue sessions yet`. From @tnalbant (#5654, #5675).
 - `deja stats --year` says "1 session", "1 turn" and "1 record" on every
   line, not only the first, and the verbs agree. From @dannyward630 (#5655,
   #5658).
@@ -69,6 +76,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reasoning off replied with only that line in 10 of 10 runs. It now asks for
   the answer first and the line last: 10 of 10 answered, 10 still credited
   the recall (#5664).
+- The compaction freshness check stops reading git output at its deadline. A
+  child process left holding the pipe kept it reading until that child exited,
+  which on a worktree with millions of untracked files can take minutes. From
+  @miztizm (#5620, #5621).
 - On Windows, plugins no longer flash a console window each time they run
   deja from a GUI host such as the DSH desktop app. Every spawn in the shipped
   and generated JavaScript plugins and the npm launcher now passes
