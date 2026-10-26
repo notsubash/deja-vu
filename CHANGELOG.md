@@ -36,6 +36,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `deja show --offset -1` says `--offset` wants a number from 0 up and quotes
+  the value, as `deja recall` does. It shared one message with `--limit`,
+  "needs a positive integer", which is wrong for `--offset`: 0 is the first
+  message (#5650).
 - Amp threads the plugin writes are filed under the workspace Amp has open,
   not `amp/plugins`. The plugin took `process.cwd()` for the thread's
   directory, and Amp runs a plugin from `~/.config/amp/plugins`, so every
