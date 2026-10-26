@@ -46,6 +46,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   left out `--all-projects` and `restore` spelled `-o file` for
   `-o|--out file`. `deja files`, a third copy, now reads the same entry
   (#5641).
+- `deja show --offset -1` says `--offset` wants a number from 0 up and quotes
+  the value, as `deja recall` does. It shared one message with `--limit`,
+  "needs a positive integer", which is wrong for `--offset`: 0 is the first
+  message (#5650).
 - `deja help delete` names the agents it takes instead of describing them: the
   page closes with the list built from the two maps the command reads, so an
   agent added to either is named there without a second edit. The refusal for an
@@ -77,6 +81,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reasoning off replied with only that line in 10 of 10 runs. It now asks for
   the answer first and the line last: 10 of 10 answered, 10 still credited
   the recall (#5664).
+- `deja fix` finds the failures and fixes that happened in subagents. The
+  subagent cut dropped every command a child ran, so most of them were never
+  mined. It now keeps the commands with their exit status, and of their output
+  only the lines that read as a failure or carry a test runner's verdict. On a
+  rebuild of one machine's Claude history, subagent sessions with commands
+  went from 754 to 2097 of 2273 and served fix pairs from 320 to 588, for 4.6%
+  more index (224 to 234 MB) and about 4% slower search. The index is rebuilt
+  once on upgrade (#5678).
+- `opencode run "<question>"` gets per-prompt recall again. opencode quotes
+  each argument holding a space, and the prompt in quotes read as one clause,
+  so an instruction in front of the question used up the terms and the block
+  was empty. A prompt wrapped whole in one pair of quotes is now read without
+  them (#5679).
 - The compaction freshness check stops reading git output at its deadline. A
   child process left holding the pipe kept it reading until that child exited,
   which on a worktree with millions of untracked files can take minutes. From
