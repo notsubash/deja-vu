@@ -252,7 +252,14 @@ _deja_completion() {
                 COMPREPLY=( $(compgen -W "--state --note --tag --to" -- "$cur") )
             fi
             ;;
-        fix|friction|tests)
+        friction)
+            if [[ "$prev" == "--limit" || "$prev" == "--settle" || "$prev" == "--unsettle" ]]; then
+                COMPREPLY=()
+            else
+                COMPREPLY=( $(compgen -W "--limit --json --settle --unsettle" -- "$cur") )
+            fi
+            ;;
+        fix|tests)
             if [[ "$prev" == "--limit" ]]; then
                 COMPREPLY=()
             else
@@ -441,7 +448,10 @@ _deja() {
         _arguments '--state[mark the note]:state:(%NOTE_STATES%)' '--note[the note text]:text:' '*--tag[tag the note, repeatable]:tag:' '--to[also append the note to a Markdown file]:file:_files' '1:session ID prefix:'
       fi
       ;;
-    fix|friction|tests)
+    friction)
+      _arguments '--limit[max results]:count:' '--json[print JSON]' '--settle[mark a wall fixed by the id its row prints]:wall id:' '--unsettle[take a --settle back]:wall id:'
+      ;;
+    fix|tests)
       _arguments '--limit[max results]:count:' '--json[print JSON]'
       ;;
     brief|check|ctx|embed|hook-precompact|hook-prompt|mcp|share|sources|statusline|version|warmup)
@@ -560,8 +570,12 @@ complete -c deja -n '__fish_seen_subcommand_from log' -l last -d 'Print the most
 complete -c deja -n '__fish_seen_subcommand_from log' -l json
 complete -c deja -n '__fish_seen_subcommand_from view' -l out -r -F -d 'Write the page to a file'
 complete -c deja -n '__fish_seen_subcommand_from view' -l no-open -d 'Do not open the browser'
-complete -c deja -n '__fish_seen_subcommand_from fix friction tests' -l limit -x -d 'Max results'
-complete -c deja -n '__fish_seen_subcommand_from fix friction tests' -l json -d 'Print JSON'
+complete -c deja -n '__fish_seen_subcommand_from fix tests' -l limit -x -d 'Max results'
+complete -c deja -n '__fish_seen_subcommand_from fix tests' -l json -d 'Print JSON'
+complete -c deja -n '__fish_seen_subcommand_from friction' -l limit -x -d 'Max results'
+complete -c deja -n '__fish_seen_subcommand_from friction' -l json -d 'Print JSON'
+complete -c deja -n '__fish_seen_subcommand_from friction' -l settle -x -d 'Mark a wall fixed by the id its row prints'
+complete -c deja -n '__fish_seen_subcommand_from friction' -l unsettle -x -d 'Take a --settle back'
 complete -c deja -n '__fish_seen_subcommand_from recap' -l since -x -d 'How far back, a duration like 30d (default 7d)'
 complete -c deja -n '__fish_seen_subcommand_from recap' -l limit -x -d 'Maximum sessions'
 complete -c deja -n '__fish_seen_subcommand_from recap' -l json
@@ -697,7 +711,11 @@ Register-ArgumentCompleter -Native -CommandName deja -ScriptBlock {
                 elseif ($previous -in @('--note', '--tag', '--to')) { @() }
                 else { @('--state', '--note', '--tag', '--to') }
             }
-            { $_ -in @('fix', 'friction', 'tests') } {
+            'friction' {
+                if ($previous -in @('--limit', '--settle', '--unsettle')) { @() }
+                else { @('--limit', '--json', '--settle', '--unsettle') }
+            }
+            { $_ -in @('fix', 'tests') } {
                 if ($previous -eq '--limit') { @() }
                 else { @('--limit', '--json') }
             }

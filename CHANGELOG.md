@@ -41,6 +41,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Tab completion offers `deja friction --settle` and `--unsettle` in bash, zsh,
+  fish and PowerShell, and completes nothing for the wall id after them.
+  friction shared one case with fix and tests, which offered only `--limit`
+  and `--json` (#5640).
 - `deja stats --year` says "1 session", "1 turn" and "1 record" on every
   line, not only the first, and the verbs agree. From @dannyward630 (#5655,
   #5658).

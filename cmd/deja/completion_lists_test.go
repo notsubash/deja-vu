@@ -225,3 +225,83 @@ func TestCompletionHasARecallBlock(t *testing.T) {
 		}
 	}
 }
+
+// friction shared one case with fix and tests in every shell, so Tab never
+// offered --settle or --unsettle, which `deja help friction` documents. Its
+// case is its own now; fix keeps the two flags it takes, and the wall id after
+// --settle or --unsettle is not completed (#5640).
+func TestCompletionHasAFrictionBlock(t *testing.T) {
+	for _, tc := range []struct {
+		shell, friction, fix, end string
+		// takesValue is how the shell says the flag's value is not completed.
+		takesValue []string
+	}{
+		{"bash", "\n        friction)\n", "\n        fix|tests)\n", "\n            ;;\n",
+			[]string{`"$prev" == "--settle" || "$prev" == "--unsettle" ]]; then` + "\n                COMPREPLY=()"}},
+		{"zsh", "\n    friction)\n", "\n    fix|tests)\n", "\n      ;;\n",
+			[]string{"'--settle[mark a wall fixed by the id its row prints]:wall id:'", "'--unsettle[take a --settle back]:wall id:'"}},
+		{"fish", "", "", "",
+			[]string{"-l settle -x", "-l unsettle -x"}},
+		{"powershell", "\n            'friction' {\n", "\n            { $_ -in @('fix', 'tests') } {\n", "\n            }\n",
+			[]string{"if ($previous -in @('--limit', '--settle', '--unsettle')) { @() }"}},
+	} {
+		script := emittedCompletion(t, tc.shell)
+		block := func(start, name string) string {
+			if tc.shell == "fish" {
+				return fishLinesFor(script, name)
+			}
+			_, b, ok := strings.Cut(script, start)
+			if !ok {
+				t.Errorf("%s completion has no %s block", tc.shell, name)
+				return ""
+			}
+			b, _, _ = strings.Cut(b, tc.end)
+			return b
+		}
+		friction, fix := block(tc.friction, "friction"), block(tc.fix, "fix")
+		// fish names a long flag "-l settle" where the others spell "--settle".
+		flags := func(b string) string { return strings.ReplaceAll(b, "-l ", "--") }
+		for _, flag := range []string{"--limit", "--json", "--settle", "--unsettle"} {
+			if !strings.Contains(flags(friction), flag) {
+				t.Errorf("%s friction block does not offer %s:\n%s", tc.shell, flag, friction)
+			}
+		}
+		for _, flag := range []string{"--limit", "--json"} {
+			if !strings.Contains(flags(fix), flag) {
+				t.Errorf("%s fix block no longer offers %s:\n%s", tc.shell, flag, fix)
+			}
+		}
+		for _, flag := range []string{"--settle", "--unsettle"} {
+			if strings.Contains(flags(fix), flag) {
+				t.Errorf("%s fix block offers %s, which only friction takes:\n%s", tc.shell, flag, fix)
+			}
+		}
+		for _, want := range tc.takesValue {
+			if !strings.Contains(friction, want) {
+				t.Errorf("%s friction block completes the wall id after --settle; want %q in:\n%s", tc.shell, want, friction)
+			}
+		}
+	}
+}
+
+// fishLinesFor is the fish script's lines that apply to one command: fish has
+// no case block, each flag is a complete line whose first condition lists the
+// commands it is for.
+func fishLinesFor(script, name string) string {
+	const prefix = "complete -c deja -n '__fish_seen_subcommand_from "
+	var lines []string
+	for line := range strings.SplitSeq(script, "\n") {
+		rest, ok := strings.CutPrefix(line, prefix)
+		if !ok {
+			continue
+		}
+		cmds, _, _ := strings.Cut(rest, "'")
+		cmds, _, _ = strings.Cut(cmds, ";")
+		for c := range strings.FieldsSeq(cmds) {
+			if c == name {
+				lines = append(lines, line)
+			}
+		}
+	}
+	return strings.Join(lines, "\n")
+}
