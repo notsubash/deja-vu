@@ -27,6 +27,7 @@ import (
 
 	"github.com/vshulcz/deja-vu/internal/cjkfold"
 	"github.com/vshulcz/deja-vu/internal/digest"
+	"github.com/vshulcz/deja-vu/internal/evidence"
 	"github.com/vshulcz/deja-vu/internal/model"
 	"github.com/vshulcz/deja-vu/internal/nfcfold"
 	"github.com/vshulcz/deja-vu/internal/query"
@@ -1272,6 +1273,8 @@ func mineRebuildSidecars(tmp string, ss []model.Session, m Manifest, keptSource 
 			reportAdvance(1)
 		})
 	}
+	// Receipts read the same sessions; no phase of their own.
+	sidecars.Go(func() { evidence.Build(tmp, ss, nil) })
 	sidecars.Wait()
 	// After the facts, whose file it is stamped with.
 	writeCommandsState(tmp, cmdState, m)
@@ -1673,6 +1676,7 @@ func withKeptRow(row, kept SessionMeta, sameVersion bool) SessionMeta {
 	if sameVersion {
 		row.Settled, row.RanCommand, row.Asked, row.Hit, row.GaveUp = kept.Settled, kept.RanCommand, kept.Asked, kept.Hit, kept.GaveUp
 		row.Touched, row.TouchHits = kept.Touched, kept.TouchHits
+		row.Rules, row.Revokes, row.Planted = kept.Rules, kept.Revokes, kept.Planted
 	}
 	return row
 }
@@ -2527,6 +2531,10 @@ func writeSessionsWithSync(tmp, dir string, ss []model.Session, files map[string
 	// the bar sat still through it (#3372).
 	if !m.SearchOnly {
 		reportPhase("mining fixes and commands", 5)
+		// Beside the sidecars, which read the same sessions and write files
+		// of their own, as the other full path runs them.
+		var receipts sync.WaitGroup
+		receipts.Go(func() { evidence.Build(tmp, ss, func(t string) string { r, _, _ := indexedText(t); return r }) })
 		buildCooccur(tmp, ss)
 		reportAdvance(1)
 		cmds := commandSessions(ss, m, nil)
@@ -2539,6 +2547,7 @@ func writeSessionsWithSync(tmp, dir string, ss []model.Session, files map[string
 		reportAdvance(1)
 		buildSessionFacts(tmp, cmds)
 		reportAdvance(1)
+		receipts.Wait()
 	}
 	reportPhase("writing index", sp.bucketCount())
 	if err := sp.writeBuckets(filepath.Join(tmp, "buckets")); err != nil {
@@ -3093,9 +3102,12 @@ func textOf(s model.Session) sessionText {
 	if len(s.Messages) > 0 {
 		last = messageFingerprint(s.Messages[len(s.Messages)-1])
 	}
+	rules, revokes := foldUserRules(nil, nil, s.Typed)
+	planted := foldPlanted(nil, s.Planted)
 	return sessionText{title: s.Title, meta: SessionMeta{ID: s.ID, Harness: s.Harness, Project: s.Project, Path: s.Path, Title: title, AgentTitle: agentTitle, Started: s.Started, Updated: s.Updated, Touched: touched, TouchHits: touchHits, Counted: len(s.Messages), LastMsg: last, Asked: askedHashes(s.Messages), Hit: frictionHashes(s.Messages), GaveUp: gaveUp(s.Messages), Words: sessionWords(s.Messages), NoText: !holdsText(s), Settled: sessionSettled(s), RanCommand: ranCommand(s.Messages),
 		Kind: s.Kind, Parent: s.Parent, Agent: s.Agent, Opening: SessionOpening(s),
-		OrigID: s.OrigID, RemoteID: s.RemoteID, From: s.From, Lifecycle: s.Lifecycle, LifecycleNote: s.LifecycleNote, LifecycleAt: s.LifecycleAt}}
+		OrigID: s.OrigID, RemoteID: s.RemoteID, From: s.From, Lifecycle: s.Lifecycle, LifecycleNote: s.LifecycleNote, LifecycleAt: s.LifecycleAt,
+		Rules: rules, Revokes: revokes, Planted: planted}}
 }
 
 // sessionSettled is what this session concluded, taken from its tail.
@@ -5842,6 +5854,11 @@ func appendIncremental(dir, harness, scope string, old Manifest, files map[strin
 	}
 	whole, rewhole := wholeSessionsForFixes(dir, m, appended)
 	mergeFixes(dir, dir, nil, whole, rewhole)
+	grew := map[string]bool{}
+	for _, s := range appended {
+		grew[s.Harness+":"+s.ID] = true
+	}
+	updateReceipts(dir, dir, m, grew)
 	// The two command tables are mined from every record the index holds, which
 	// is a scan of records.bin — 2.9s of an 8.6s pass on a 191 MB store. Nothing
 	// this pass added can change them unless it added a command or the output of
@@ -5997,6 +6014,10 @@ func appendedRow(m *Manifest, key string, s model.Session, p string, of, now Fil
 func extendOwnedRow(meta *SessionMeta, s model.Session, p string, known bool) {
 	ran := meta.RanCommand
 	extendDerived(meta, s.Messages)
+	// Folding a turn twice changes nothing, so a store that hands the whole
+	// session over again is safe here.
+	meta.Rules, meta.Revokes = foldUserRules(meta.Rules, meta.Revokes, s.Typed)
+	meta.Planted = foldPlanted(meta.Planted, s.Planted)
 	// The session's first command: its line can come from what it
 	// said before this tail, which the fold never saw. Once per
 	// session, so the whole read is affordable here.

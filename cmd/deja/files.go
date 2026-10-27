@@ -116,7 +116,7 @@ func runFiles(dir string, args []string, stdout io.Writer) error {
 	}
 	limit, project, allProjects, asJSON := opts.limit, opts.project, opts.allProjects, opts.asJSON
 	if len(opts.terms) == 0 {
-		return errors.New("usage: deja files <topic> [--project name] [--all-projects] [--limit n] [--json]")
+		return usageError("files")
 	}
 	q := strings.Join(opts.terms, " ")
 	// The answer is about the repository the question was asked in. Read over

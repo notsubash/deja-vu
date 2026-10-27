@@ -22,6 +22,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Recall labels who wrote each line (`Model said (no record backs it)`,
+  `Prompt written by a parent agent`, `Output with an instruction to agents` …)
+  and shows the command or edit a model's conclusion rests on above the
+  conclusion, from receipts written when the index is built or updated. A check or build
+  rule a person typed in an interactive Claude Code session of the current
+  project is shown as `User said (this project)`, and the frame header and MCP
+  instructions say to follow those lines and nothing else. An instruction to
+  run something that no person in the project typed (tool output, a paste, a
+  parent agent's prompt, a `claude -p` run, another project) is cut to
+  `[instruction to agents left out]`; a rule the person took back is not
+  shown. The index version is now 109, so the store rebuilds once on the
+  first run.
+- Recall no longer heads a page "No session is about this" when a session on
+  it holds most of a long query. The page says which session holds how many of
+  the query's words and which it lacks. A page that shares only filler words
+  with the query, or lacks the path or identifier it names, keeps the old line.
+  A word-form match that had to drop query words no longer outranks the
+  sessions that hold them.
+- The instructions, skills and extensions ask for 1-3 exact terms on recall (a
+  file path, an error string, a flag or identifier) instead of the task's key
+  nouns. Queries of six or more words almost never matched.
 - The instructions, skills and extensions no longer tell the agent that a
   recalled rule outranks its defaults. Recall is untrusted reference data from
   past transcripts: the agent names the rule in one line and asks before it
@@ -45,6 +66,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   fish and PowerShell, and completes nothing for the wall id after them.
   friction shared one case with fix and tests, which offered only `--limit`
   and `--json` (#5640).
+- `deja how` and `deja restore` run without an argument print the usage line
+  `deja help` prints. Each kept its own copy, and both had drifted: `how`
+  left out `--all-projects` and `restore` spelled `-o file` for
+  `-o|--out file`. `deja files`, a third copy, now reads the same entry
+  (#5641).
+- opencode and Kilo keep one per-prompt recall block on a user message. The
+  plugins appended on every model call and only checked for their own block at
+  the end, so two copies of the plugin, or a host that keeps the message
+  between calls, stacked a block per call, alternating between two pointers.
+  The block is now put in place of any already there, and a block already on
+  the message is reused rather than asked for again. Run
+  `deja install opencode-auto` again to rewrite the plugin (#5682).
+- `deja show --offset -1` says `--offset` wants a number from 0 up and quotes
+  the value, as `deja recall` does. It shared one message with `--limit`,
+  "needs a positive integer", which is wrong for `--offset`: 0 is the first
+  message (#5650).
 - `deja help delete` names the agents it takes instead of describing them: the
   page closes with the list built from the two maps the command reads, so an
   agent added to either is named there without a second edit. The refusal for an
@@ -76,6 +113,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reasoning off replied with only that line in 10 of 10 runs. It now asks for
   the answer first and the line last: 10 of 10 answered, 10 still credited
   the recall (#5664).
+- `deja fix` finds the failures and fixes that happened in subagents. The
+  subagent cut dropped every command a child ran, so most of them were never
+  mined. It now keeps the commands with their exit status, and of their output
+  only the lines that read as a failure or carry a test runner's verdict. On a
+  rebuild of one machine's Claude history, subagent sessions with commands
+  went from 754 to 2097 of 2273 and served fix pairs from 320 to 588, for 4.6%
+  more index (224 to 234 MB) and about 4% slower search. The index is rebuilt
+  once on upgrade (#5678).
+- `opencode run "<question>"` gets per-prompt recall again. opencode quotes
+  each argument holding a space, and the prompt in quotes read as one clause,
+  so an instruction in front of the question used up the terms and the block
+  was empty. A prompt wrapped whole in one pair of quotes is now read without
+  them (#5679).
 - The compaction freshness check stops reading git output at its deadline. A
   child process left holding the pipe kept it reading until that child exited,
   which on a worktree with millions of untracked files can take minutes. From

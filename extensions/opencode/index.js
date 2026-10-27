@@ -25,7 +25,9 @@ import {
   mcpWired,
   recallArgv,
   recallSilence,
+  settleRecall,
   TOOL_SPECS,
+  trailingRecall,
   userTurns,
   zodTools,
 } from "./lib.js"
@@ -225,7 +227,7 @@ export const DejaPlugin = async ({ client, directory }, options = {}) => {
       description:
         "Search this machine's own past AI coding sessions — every agent used on it, including months before deja was installed. Use before debugging an error or re-implementing anything that may already exist, and before the first edit in a task and before calling a change done or ready to merge. Match on the most specific token available: an exact error string, function name, file path or flag.",
       args: {
-        query: { type: "string", description: "Specific tokens to match. Several words are ANDed." },
+        query: { type: "string", description: "1-3 exact terms: a file path, an error string, a flag or identifier." },
         limit: { type: "number", optional: true, description: "How many sessions to return. Default 5." },
         offset: {
           type: "number",
@@ -374,6 +376,12 @@ export const DejaPlugin = async ({ client, directory }, options = {}) => {
       // its store, so text added to a message here lasts one call: once the
       // agent ran a tool the recall was gone, and deja, having shown it, would
       // not send it again (#4786).
+      // A block already on the message came from another copy of this plugin
+      // earlier in the same call, or from this one in a host that keeps the
+      // message between calls. It is the answer: asked again, deja picks the
+      // next pointer down and the message carried both (#5682).
+      const present = trailingRecall(last.parts[last.parts.length - 1]?.text).blocks[0]
+      if (!recalled.has(last.key) && present) remember(last.key, present)
       if (!recalled.has(last.key)) {
         // A turn with no text, an image alone, still goes to hook-prompt: that
         // call is what stamps the session live again after session.idle ended
@@ -400,11 +408,11 @@ export const DejaPlugin = async ({ client, directory }, options = {}) => {
         if (reply?.systemMessage) await toast(reply.systemMessage)
       }
       // Every message gets back what it was given, in every call, the way
-      // Claude Code keeps a prompt hook's text in its transcript.
+      // Claude Code keeps a prompt hook's text in its transcript. Once: the
+      // block is put in place of any already there, never after it.
       for (const u of users) {
         const extra = recalled.get(u.key)
-        const tail = u.parts[u.parts.length - 1]
-        if (extra && tail && !tail.text.endsWith(extra)) tail.text += "\n\n" + extra
+        if (extra) settleRecall(u.parts[u.parts.length - 1], extra)
       }
     } catch {
       // memory is optional: never break the session over it

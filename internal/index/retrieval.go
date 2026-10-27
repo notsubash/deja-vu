@@ -376,10 +376,16 @@ func withRelevanceTail(once *relevanceOnce, dir string, m Manifest, o query.Opti
 		merged = append(merged, r)
 		added++
 	}
+	// A head the word-form ladder got by dropping words is a partial match like
+	// the rest, and promoting it put sessions holding only the query's filler
+	// ("flags", "tests") above the one holding its path: on a long query the
+	// ladder drops whichever words leave anything at all, often the ones that
+	// named the subject. The ranking orders it with the rest instead.
+	dropped := droppedAWord(res.Variants)
 	at := make(map[string]int, len(merged))
 	for _, s := range merged {
 		key := s.Harness + ":" + s.ID
-		at[key] = place(s, seen[key])
+		at[key] = place(s, seen[key] && !dropped)
 	}
 	sort.SliceStable(merged, func(i, j int) bool {
 		return at[merged[i].Harness+":"+merged[i].ID] < at[merged[j].Harness+":"+merged[j].ID]
@@ -692,6 +698,9 @@ func gateIDF(totalDocs float64, minDF int, rank float64) float64 {
 // any large corpus and clears nothing. Terms living in one or two sessions
 // are informative regardless — small corpora never reach the ratio bar.
 const dejaVuIDFFloor = 2.0
+
+// InformativeIDF is dejaVuIDFFloor for callers reading SearchResult.TermIDF.
+const InformativeIDF = dejaVuIDFFloor
 
 // dejaVuStrongIDFFloor is the bar for a term rare enough to justify an
 // UNPROMPTED recall on its own. The ordinary floor admits words that merely
@@ -2787,6 +2796,11 @@ func scanRecordsWithVariants(dir string, m Manifest, o query.Options, offsets []
 func scanRecordsTextMisses(dir string, m Manifest, o query.Options, offsets []int64, variants map[string][]string) ([]model.Session, int, error) {
 	misses := 0
 	by := map[string]*model.Session{}
+	// Sessions come back in the order their first match was read. Ranging over
+	// the map handed the exact tier a rotated order on every call, and the
+	// directory lead serves that order as it is: a package rule in the fourth
+	// of seven sessions was on the page in some calls and not in others.
+	var order []string
 	add := func(r Record) {
 		meta, ok := m.Sessions[r.Key]
 		if !ok || o.ExcludeSessions[meta.ID] || o.CutRecord(meta.ID, r.Time) {
@@ -2814,6 +2828,7 @@ func scanRecordsTextMisses(dir string, m Manifest, o query.Options, offsets []in
 			cp.Held = meta.Counted
 			s = &cp
 			by[r.Key] = s
+			order = append(order, r.Key)
 		}
 		s.Messages = append(s.Messages, model.Message{Role: r.Role, Text: r.Text, Time: r.Time})
 	}
@@ -2852,7 +2867,8 @@ func scanRecordsTextMisses(dir string, m Manifest, o query.Options, offsets []in
 		}
 	}
 	out := make([]model.Session, 0, len(by))
-	for _, s := range by {
+	for _, k := range order {
+		s := by[k]
 		orderPromotedNote(s)
 		out = append(out, *s)
 	}

@@ -229,3 +229,30 @@ func TestTheHandoffFooterNamesOnlyAgentsFoundHere(t *testing.T) {
 		t.Errorf("with no agent here: %q", got)
 	}
 }
+
+// Run without their argument, how and restore printed a usage line of their
+// own that had drifted from `deja help`, and files kept a third copy that
+// only happened to match. Each now prints its help entry's first usage line
+// (#5641).
+func TestAMissingArgumentPrintsTheUsageLineHelpPrints(t *testing.T) {
+	hermeticEnv(t)
+	for _, name := range []string{"how", "restore", "files"} {
+		t.Run(name, func(t *testing.T) {
+			e, ok := helpEntryFor(name)
+			if !ok {
+				t.Fatalf("%s has no help entry", name)
+			}
+			_, err := captureRun(t, name)
+			if err == nil {
+				t.Fatalf("deja %s with no argument was accepted", name)
+			}
+			if !strings.HasSuffix(err.Error(), e.usage[0]) {
+				t.Errorf("deja %s says\n  %s\nwhere deja help %s says\n  %s", name, err, name, e.usage[0])
+			}
+		})
+	}
+	// A name with no entry still gets a usage line rather than a panic.
+	if err := usageError("no-such-command"); err.Error() != "usage: deja no-such-command" {
+		t.Errorf("usageError for an unknown name = %q", err)
+	}
+}

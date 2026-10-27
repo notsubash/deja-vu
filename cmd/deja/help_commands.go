@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -318,6 +319,18 @@ func helpEntryFor(name string) (helpEntry, bool) {
 		}
 	}
 	return helpEntry{}, false
+}
+
+// usageError is what a command says when it is run without the argument it
+// needs. It is the command's first usage line from its help entry: how,
+// restore and files each kept their own copy, and two had drifted from what
+// `deja help` prints (#5641).
+func usageError(name string) error {
+	e, ok := helpEntryFor(name)
+	if !ok || len(e.usage) == 0 {
+		return errors.New("usage: deja " + name)
+	}
+	return errors.New("usage: " + e.usage[0])
 }
 
 // toolOwnsHelp reports whether `deja <name> --help` belongs to the program the

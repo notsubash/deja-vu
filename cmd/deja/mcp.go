@@ -379,7 +379,7 @@ func dejaTool() map[string]any {
 	return map[string]any{
 		"name": "deja",
 		"description": "This user's own past sessions from every AI coding tool on this machine — not general knowledge, not library docs. Modes:\n" +
-			"- recall: search past sessions. An exact error string, name or path is the strongest query; your own words work too.\n" +
+			"- recall: search past sessions. Pass 1-3 exact terms: a path, an error string, a flag or identifier.\n" +
 			"- context: the full story of one session, when a recall hit is not enough.\n" +
 			"- blame: why a file is the way it is, before you edit or delete it. Sessions, not git authorship.\n" +
 			"- fix: you just hit an error — what this machine ran after that same error. Pass the output verbatim.\n" +
@@ -394,7 +394,7 @@ func dejaTool() map[string]any {
 			"type": "object",
 			"properties": map[string]any{
 				"mode":    map[string]any{"type": "string", "enum": []string{"recall", "context", "blame", "fix", "how", "orient", "remember", "handoff"}},
-				"q":       map[string]any{"type": "string", "description": "What to ask about: the question or exact token; for blame a path, for fix the failing output verbatim, for remember the fact."},
+				"q":       map[string]any{"type": "string", "description": "What to ask about: for recall 1-3 exact terms; for blame a path, for fix the failing output verbatim, for remember the fact."},
 				"harness": map[string]any{"type": "string", "description": harnessFilterDescription()},
 				"project": map[string]any{"type": "string", "description": "Optional project filter; for remember, where it is filed."},
 				"limit":   map[string]any{"type": "number", "description": "Max sessions per ~4 KB page."},
@@ -856,8 +856,10 @@ func keepsQuery(shorter, longer, query string) bool {
 // passed 4096-recallFrameOverhead; this path passed no budget at all, so the
 // digest header — which carries a project name and a session id, neither of
 // them bounded — pushed an ordinary reply to 8221 bytes and a long-named one to
-// 8335 (#1797).
-const contextMCPBudget = 8192
+// 8335 (#1797). The frame's header grew by 270 bytes when it started saying
+// which recalled lines to follow, and the budget grew with it, or the digest
+// lost its own end note to the trim.
+const contextMCPBudget = 8192 + 270
 
 // recordedMCPAnswer journals what a tool handed the agent, whatever it was:
 // "no session ran a command after that error" is an answer the agent acts on
@@ -1746,6 +1748,15 @@ func rankRecall(dir, q, harness, project string, window int) (rankedRecall, erro
 // recallPage writes one page of ranked hits, already cut to the page.
 func recallPage(dir, q string, budget, offset, limit, total, demoted int, about bool, result index.SearchResult, o search.Options, hits []search.Hit, twins map[string][]string, cov index.Coverage) (string, int, int64, []string, []string, error) {
 	attachAnswers(dir, hits)
+	// Every line in its author's words, and the person's own check and build
+	// rules for the project the agent works in under the mark the frame says
+	// to follow. The scope is the working directory's even when the caller
+	// filtered on another project: a rule is only ever one of this project's.
+	scope := howScope(howCwd(), "", false)
+	for i := range hits {
+		index.MarkUserRules(dir, &hits[i].Session, scope)
+		hits[i].Snippets = search.EvidenceRewrite(hits[i].Session, dir, hits[i].Snippets)
+	}
 	// Counted on the page rather than taken from the result: the strict head
 	// is small but the trust policy can withhold part of it and paging can
 	// leave the rest behind, and a line counting sessions the reader cannot
@@ -1778,7 +1789,13 @@ func recallPage(dir, q string, budget, offset, limit, total, demoted int, about 
 	if absent {
 		namesTheAsked = false
 	}
-	namesTheAsked = writeRecallLead(&b, result, hits, q, strictShown, absent, namesTheAsked)
+	// Coverage settles what the two readings above cannot: a session holding
+	// most of a long query is an answer in part even when a word was dropped
+	// or the query's rarest word is one nothing holds.
+	cover := bestCoverage(hits, q, result.TermIDF)
+	covered := result.Tier == search.TierRelevance && strictShown == 0 && result.Directory == "" &&
+		!namesTheAsked && cover.aboutIt()
+	namesTheAsked = writeRecallLead(&b, result, hits, q, strictShown, absent, namesTheAsked, cover, covered)
 	if note := demotedNote(hits, demoted); note != "" {
 		fmt.Fprintln(&b, note+" — read the order as the user's judgement, not as recency.")
 	}
@@ -1924,16 +1941,21 @@ func recallPageFooter(b *strings.Builder, hits []search.Hit, result index.Search
 
 // writeRecallLead writes the line that says how the page was matched, and
 // returns namesTheAsked as that line left it.
-func writeRecallLead(b *strings.Builder, result index.SearchResult, hits []search.Hit, q string, strictShown int, absent, namesTheAsked bool) bool {
+func writeRecallLead(b *strings.Builder, result index.SearchResult, hits []search.Hit, q string, strictShown int, absent, namesTheAsked bool, cover recallCoverage, covered bool) bool {
 	// Whether the line below the tier already said nothing is about this, so
 	// the absent-word case can say it from wherever the chain stopped without
 	// saying it twice.
 	saidNothing := false
+	if covered {
+		// In place of the word forms line too: it called the path the
+		// session below holds "ignored", because no session holds it with
+		// every other word.
+		fmt.Fprintln(b, cover.line())
+		return true
+	}
 	switch {
-	case result.Stemmed:
-		fmt.Fprintf(b, "No exact match; using word forms: %s\n", strings.Join(fuzzySummary(result.Variants), ", "))
-	case result.Fuzzy:
-		fmt.Fprintf(b, "No exact match; using close spellings: %s\n", strings.Join(fuzzySummary(result.Variants), ", "))
+	case result.Stemmed, result.Fuzzy:
+		writeFormsLine(b, result)
 	case result.Tier == search.TierError:
 		fmt.Fprintln(b, "No exact match; these sessions hit the same error (matched by signature).")
 	case result.Directory != "" && strictShown == 0:
@@ -1978,6 +2000,9 @@ func writeRecallLead(b *strings.Builder, result index.SearchResult, hits []searc
 		asked, _ := query.QueryParts(q)
 		if !absent && relevanceHitsAreAboutIt(hits, asked, result.TermIDF) {
 			fmt.Fprintln(b, "No exact match; the sessions below are ranked by relevance — check that one describes what is happening now before acting on it.")
+			// The count line follows the lead; it said "none about it"
+			// under this one.
+			namesTheAsked = true
 		} else {
 			fmt.Fprintln(b, nothingIsAboutThis+" so the sessions below are the nearest by wording — treat them as leads to check, not as a record, and say plainly if none of them answers.")
 			saidNothing = true
@@ -1990,6 +2015,15 @@ func writeRecallLead(b *strings.Builder, result index.SearchResult, hits []searc
 		fmt.Fprintln(b, nothingIsAboutThis+" so the sessions below are the nearest by wording — treat them as leads to check, not as a record, and say plainly if none of them answers.")
 	}
 	return namesTheAsked
+}
+
+// writeFormsLine names the word forms or close spellings the ladder used.
+func writeFormsLine(b *strings.Builder, result index.SearchResult) {
+	how := "word forms"
+	if !result.Stemmed {
+		how = "close spellings"
+	}
+	fmt.Fprintf(b, "No exact match; using %s: %s\n", how, strings.Join(fuzzySummary(result.Variants), ", "))
 }
 
 // writeRecallHitHead writes one hit's header, its marks and its excerpts.
@@ -2056,7 +2090,15 @@ func writeRecallHitHead(hb *strings.Builder, h search.Hit, i int, twins map[stri
 	} else if h.Tier != search.TierExact {
 		fmt.Fprintf(hb, "[%s]\n", h.Tier)
 	}
+	// The person's rules for this project lead, whether or not an excerpt
+	// reached them, and are not repeated below.
+	for _, r := range h.Session.UserRules {
+		fmt.Fprintf(hb, "- %s%s\n", search.UserRuleLabel, recallListingLine(r))
+	}
 	for _, sn := range h.Snippets {
+		if strings.HasPrefix(sn, search.UserRuleLabel) {
+			continue
+		}
 		fmt.Fprintf(hb, "- %s\n", recallListingLine(sn))
 	}
 }
@@ -2116,7 +2158,16 @@ func writeRecallConclusions(hb *strings.Builder, dir, q string, h search.Hit, o 
 				// because the label is what an agent reads as the claim.
 				label = "  what this session concluded, about its own work:"
 			}
-			fmt.Fprintln(hb, label)
+			// In their authors' words, and once: a receipt can be a line the
+			// excerpts above already show, or a rule the head already marks.
+			cs = search.EvidenceRewrite(h.Session, dir, cs)
+			cs = slices.DeleteFunc(cs, func(c string) bool {
+				return strings.HasPrefix(c, search.UserRuleLabel) ||
+					slices.ContainsFunc(h.Snippets, func(sn string) bool { return strings.TrimSpace(sn) == strings.TrimSpace(c) })
+			})
+			if len(cs) > 0 {
+				fmt.Fprintln(hb, label)
+			}
 			for _, c := range cs {
 				fmt.Fprintf(hb, "  → %s\n", recallListingLine(c))
 			}
@@ -2272,6 +2323,8 @@ func contextByID(dir, q string) (string, idContext, bool) {
 	if full, ok, ferr := wholeSessionForMCP(dir, whole); ferr == nil && ok {
 		whole = full
 	}
+	index.MarkUserRules(dir, &whole, howScope(howCwd(), "", false))
+	search.ScrubMessages(&whole)
 	var b bytes.Buffer
 	search.PrintContext(&b, whole, "")
 	printed := withChanges(b.String(), whole)
@@ -2374,6 +2427,8 @@ func recallContextResultFrom(dir, q, harness string) (string, int, int64, []stri
 	if full, ok, ferr := wholeSessionForMCP(dir, whole); ferr == nil && ok {
 		whole = cutSession(full, o)
 	}
+	index.MarkUserRules(dir, &whole, howScope(howCwd(), "", false))
+	search.ScrubMessages(&whole)
 	var b bytes.Buffer
 	search.PrintContext(&b, whole, q)
 	text := withChanges(b.String(), whole) + contextOthersNote(len(hits)+unreadSessions(result), unreadEstimated(result))
@@ -2383,6 +2438,10 @@ func recallContextResultFrom(dir, q, harness string) (string, int, int64, []stri
 		// is the one that identified the question.
 		names := !namedSomethingAbsent(result.Variants) &&
 			sessionNamesTheAsked(whole, q, result.TermIDF)
+		// Holding most of a long query names it too, as on the recall page.
+		if !names && hits[0].Tier == search.TierRelevance && !hits[0].Strict {
+			names = bestCoverage([]search.Hit{{Session: whole}}, q, result.TermIDF).aboutIt()
+		}
 		text = contextTierLead(hits[0].Tier, hits[0].Strict, names) +
 			contextIgnoredWords(result) + text
 	}

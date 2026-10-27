@@ -143,7 +143,7 @@ func runHow(dir string, args []string, stdout io.Writer) error {
 		}
 	}
 	if len(terms) == 0 {
-		return errors.New("usage: deja how <what> [--project name] [--limit n] [--json]")
+		return usageError("how")
 	}
 	if err := index.Ensure(dir, "", false, os.Stderr); err != nil {
 		return ensureError(dir, err)
