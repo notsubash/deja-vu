@@ -1,10 +1,13 @@
 package docsdate
 
 import (
+	"bufio"
 	"bytes"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -86,3 +89,71 @@ func TestASidebarOnlyCommitDoesNotDateThePage(t *testing.T) {
 		t.Errorf("an uncommitted article edit is dated %s, want today %s", got, want)
 	}
 }
+
+// Most pages have an <article>, but not all of them, and a page cut off
+// mid-tag is still a page: what is compared falls back to the page without its
+// sidebar, and then to the whole page, rather than to nothing.
+func TestContentWithoutAWholeArticle(t *testing.T) {
+	for _, tc := range []struct{ page, want string }{
+		{"<article>text</article>", "<article>text"},
+		{"<h1>t</h1><aside>nav</aside><p>text</p>", "<h1>t</h1><p>text</p>"},
+		{"<article>text<aside>nav</aside><p>more</p>", "<article>text<p>more</p>"},
+		{"<p>text</p><aside>nav", "<p>text</p><aside>nav"},
+		{"<p>text</p>", "<p>text</p>"},
+	} {
+		if got := string(Content([]byte(tc.page))); got != tc.want {
+			t.Errorf("Content(%q) = %q, want %q", tc.page, got, tc.want)
+		}
+	}
+}
+
+// blob reads what `git cat-file --batch` prints. A path the commit does not
+// have is an empty page; anything else that is not a header and a body of the
+// size it gives is an error, not a short page that would date wrong.
+func TestBlobReadsTheCatFileBatchFormat(t *testing.T) {
+	for _, tc := range []struct {
+		name, out, want string
+		fails           bool
+	}{
+		{"blob", "abc blob 5\nhello\n", "hello", false},
+		{"missing", "abc:docs/a.html missing\n", "", false},
+		{"bad header", "fatal: not a valid object name\n", "", true},
+		{"bad size", "abc blob five\nhello\n", "", true},
+		{"short body", "abc blob 50\nhello\n", "", true},
+		{"no header", "", "", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var in bytes.Buffer
+			d := &Dater{in: nopCloser{&in}, out: bufio.NewReader(strings.NewReader(tc.out))}
+			got, err := d.blob("abc", "docs/a.html")
+			if tc.fails {
+				if err == nil {
+					t.Errorf("read %q from %q, want an error", got, tc.out)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("read %q, want %q", got, tc.want)
+			}
+			if in.String() != "abc:docs/a.html\n" {
+				t.Errorf("asked cat-file for %q", in.String())
+			}
+		})
+	}
+	d := &Dater{in: failWriter{}, out: bufio.NewReader(strings.NewReader("abc blob 5\nhello\n"))}
+	if _, err := d.blob("abc", "docs/a.html"); err == nil {
+		t.Error("a request cat-file never got was not an error")
+	}
+}
+
+type nopCloser struct{ io.Writer }
+
+func (nopCloser) Close() error { return nil }
+
+type failWriter struct{}
+
+func (failWriter) Write([]byte) (int, error) { return 0, io.ErrClosedPipe }
+func (failWriter) Close() error              { return nil }

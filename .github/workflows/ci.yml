@@ -485,6 +485,10 @@ jobs:
       # internal/jsonout, one const and no statements, which prints no coverage
       # line at all and so cannot be floored.
       #
+      # A package tested only from another one counts 0% here: each package is
+      # measured by its own tests. gitread was that, checked only from
+      # cmd/deja, and it, docsdate and testenv went unlisted until #5639.
+      #
       # Eight packages had no floor until #1956, five of them fully covered.
       # The total floor of 87.5% is not a substitute: prompt sat at 84.8% under
       # it for months without a word. Every floor here is set at today's number
@@ -505,12 +509,13 @@ jobs:
         run: |
           declare -A floor=(
             [cmd/deja]=88 [internal/atomicfile]=77 [internal/bench]=100
-            [internal/cjkfold]=100 [internal/digest]=90 [internal/embed]=93 [internal/evidence]=80
+            [internal/cjkfold]=100 [internal/digest]=90 [internal/docsdate]=84 [internal/embed]=93
+            [internal/evidence]=80 [internal/gitread]=100
             [internal/harnesscolor]=100 [internal/index]=90 [internal/mark]=98 [internal/model]=100
             [internal/nfcfold]=100 [internal/peers]=76 [internal/policy]=100
             [internal/prompt]=84 [internal/query]=100 [internal/redact]=94
             [internal/search]=93 [internal/sources]=87 [internal/stats]=91
-            [internal/termwidth]=100 [internal/tui]=88 [internal/usage]=95
+            [internal/termwidth]=100 [internal/testenv]=88 [internal/tui]=88 [internal/usage]=95
           )
           fail=0
           declare -A seen=()
